@@ -1,0 +1,349 @@
+-- Services
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+-- State
+local selectedPlayer = nil
+local selecting = false
+local enabled = false
+
+-- GUI
+local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+gui.Name = "PlasticHangerHub"
+gui.ResetOnSpawn = false
+
+-- Main Frame
+local main = Instance.new("Frame", gui)
+main.Name = "Main"
+main.Size = UDim2.new(0, 75, 0, 40)
+main.Position = UDim2.new(0, 100, 0, 100)
+main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+main.BackgroundTransparency = 0.2
+main.Active = true
+main.Draggable = true
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
+
+local stroke = Instance.new("UIStroke", main)
+stroke.Color = Color3.fromRGB(0, 255, 255)
+stroke.Thickness = 2
+stroke.Transparency = 0.25
+
+local shadow = Instance.new("ImageLabel", main)
+shadow.Image = "rbxassetid://5553946656"
+shadow.ImageColor3 = Color3.new(0,0,0)
+shadow.ScaleType = Enum.ScaleType.Slice
+shadow.SliceCenter = Rect.new(10,10,118,118)
+shadow.Size = UDim2.new(1,12,1,12)
+shadow.Position = UDim2.new(0,-6,0,-6)
+shadow.BackgroundTransparency = 1
+shadow.ZIndex = -1
+shadow.ImageTransparency = 0.5
+
+-- Header
+local header = Instance.new("Frame", main)
+header.Size = UDim2.new(1, 0, 0, 40)
+header.BackgroundTransparency = 1
+
+-- Icon
+local sun = Instance.new("TextLabel", header)
+sun.Size = UDim2.new(0, 30, 0, 30)
+sun.Position = UDim2.new(0, 5, 0.5, -15)
+sun.BackgroundTransparency = 1
+sun.Text = "👑"
+sun.TextColor3 = Color3.fromRGB(0, 255, 255)
+sun.Font = Enum.Font.SourceSansBold
+sun.TextScaled = true
+
+-- Title
+local title = Instance.new("TextLabel", header)
+title.Text = "Slap Hanger Tower By: Hiroshi"
+title.Size = UDim2.new(0, 160, 0, 40)
+title.Position = UDim2.new(0.03, 37.5, 0, 0)
+title.TextColor3 = Color3.fromRGB(0, 255, 255)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.SourceSansSemibold
+title.TextSize = 16
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Visible = false
+
+-- Arrow Button
+local arrowContainer = Instance.new("Frame", header)
+arrowContainer.Size = UDim2.new(0, 26, 0, 26)
+arrowContainer.Position = UDim2.new(0, 40, 0.5, -13)
+arrowContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+arrowContainer.BackgroundTransparency = 0.2
+Instance.new("UICorner", arrowContainer).CornerRadius = UDim.new(1, 0)
+
+local arrowStroke = Instance.new("UIStroke", arrowContainer)
+arrowStroke.Color = Color3.fromRGB(0, 255, 255)
+arrowStroke.Thickness = 1.5
+arrowStroke.Transparency = 0.3
+
+local arrow = Instance.new("TextButton", arrowContainer)
+arrow.Size = UDim2.new(1, 0, 1, 0)
+arrow.BackgroundTransparency = 1
+arrow.Text = "+"
+arrow.TextColor3 = Color3.fromRGB(0, 255, 255)
+arrow.Font = Enum.Font.SourceSansBold
+arrow.TextScaled = true
+
+-- Container
+local container = Instance.new("Frame", main)
+container.Position = UDim2.new(0,0,0,40)
+container.Size = UDim2.new(1,0,0,0)
+container.BackgroundTransparency = 1
+container.ClipsDescendants = true
+
+local layout = Instance.new("UIListLayout", container)
+layout.Padding = UDim.new(0,6)
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Helpers
+local function createButton(text, color)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 36)
+    btn.BackgroundColor3 = color or Color3.fromRGB(25, 25, 25)
+    btn.BackgroundTransparency = 0.15
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Text = text
+    btn.Font = Enum.Font.SourceSansSemibold
+    btn.TextSize = 16
+    btn.AutoButtonColor = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+
+    local stroke = Instance.new("UIStroke", btn)
+    stroke.Color = Color3.fromRGB(0, 255, 255)
+    stroke.Thickness = 1.5
+    stroke.Transparency = 0.2
+
+    local gradient = Instance.new("UIGradient", btn)
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 200, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 150, 255))
+    }
+    gradient.Rotation = 45
+
+    btn.MouseEnter:Connect(function()
+        btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        stroke.Transparency = 0
+    end)
+    btn.MouseLeave:Connect(function()
+        btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+        stroke.Transparency = 0.2
+    end)
+
+    return btn
+end
+
+local function createInput(label, default)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(0.9, 0, 0, 34)
+    row.BackgroundTransparency = 1
+
+    local lbl = Instance.new("TextLabel", row)
+    lbl.Size = UDim2.new(0.5, -4, 1, 0)
+    lbl.Text = label
+    lbl.BackgroundTransparency = 1
+    lbl.TextColor3 = Color3.fromRGB(0, 255, 255)
+    lbl.Font = Enum.Font.SourceSans
+    lbl.TextSize = 14
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local box = Instance.new("TextBox", row)
+    box.Size = UDim2.new(0.5, 0, 1, 0)
+    box.Position = UDim2.new(0.5, 4, 0, 0)
+    box.Text = default
+    box.Font = Enum.Font.SourceSans
+    box.TextSize = 14
+    box.TextColor3 = Color3.fromRGB(0, 255, 255)
+    box.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    box.BackgroundTransparency = 0.2
+
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 8)
+    local stroke = Instance.new("UIStroke", box)
+    stroke.Color = Color3.fromRGB(0, 255, 255)
+    stroke.Thickness = 1
+    stroke.Transparency = 0.3
+
+    return row, box
+end
+
+-- Inputs
+local intervalRow, intervalBox = createInput("Interval","0.01")
+local vectorRow, vectorBox = createInput("Vector","0.3,0,-4")
+intervalRow.Parent = container
+vectorRow.Parent = container
+
+-- Buttons
+local slapToggle = createButton("Slap: OFF")
+slapToggle.Parent = container
+
+local killBtn = createButton("Kill All", Color3.fromRGB(150,0,0))
+killBtn.Parent = container
+
+local slapAllBtn = createButton("Slap All")
+slapAllBtn.Parent = container
+
+local slapSelectedBtn = createButton("Slap Selected")
+slapSelectedBtn.Parent = container
+
+local selectBtn = createButton("Select Player")
+selectBtn.Parent = container
+
+local removeBtn = createButton("Remove Selected", Color3.fromRGB(180,0,0))
+removeBtn.Parent = container
+
+local destroyBtn = createButton("Destroy GUI", Color3.fromRGB(180,0,0))
+destroyBtn.Parent = container
+
+-- Notes
+local noteLabel = Instance.new("TextLabel", container)
+noteLabel.Size = UDim2.new(0.9, 0, 0, 20)
+noteLabel.Text = "ONLY WORKS WITH THE PLASTIC HANGER"
+noteLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+noteLabel.Font = Enum.Font.SourceSans
+noteLabel.TextSize = 12
+noteLabel.BackgroundTransparency = 1
+noteLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local selectedLabel = Instance.new("TextLabel", container)
+selectedLabel.Size = UDim2.new(0.9, 0, 0, 20)
+selectedLabel.Text = "Selected: None"
+selectedLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+selectedLabel.Font = Enum.Font.SourceSans
+selectedLabel.TextSize = 13
+selectedLabel.BackgroundTransparency = 1
+selectedLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Expand/Collapse
+local expanded = false
+arrow.MouseButton1Click:Connect(function()
+    expanded = not expanded
+    arrow.Text = expanded and "–" or "+"
+    title.Visible = expanded
+    arrowContainer.Position = expanded and UDim2.new(1,-40,0.5,-13) or UDim2.new(0,40,0.5,-13)
+
+    local newWidth = expanded and 260 or 80
+    local newHeight = expanded and (40 + layout.AbsoluteContentSize.Y + 12) or 40
+
+    TweenService:Create(main, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+        Size = UDim2.new(0, newWidth, 0, newHeight)
+    }):Play()
+
+    TweenService:Create(container, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+        Size = UDim2.new(1, 0, 0, expanded and layout.AbsoluteContentSize.Y + 12 or 0)
+    }):Play()
+end)
+
+-- Helpers
+local function getHangerEvent()
+    local tool = LocalPlayer.Backpack:FindFirstChild("Plastic Hanger")
+        or (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Plastic Hanger"))
+    if tool then return tool:FindFirstChild("Event") end
+    return nil
+end
+
+local function parseVector(txt)
+    local x,y,z = txt:match("([^,]+),([^,]+),([^,]+)")
+    return Vector3.new(tonumber(x) or 0.3, tonumber(y) or 0, tonumber(z) or -4)
+end
+
+-- Function Buttons
+slapToggle.MouseButton1Click:Connect(function()
+    enabled = not enabled
+    slapToggle.Text = "Slap: " .. (enabled and "ON" or "OFF")
+end)
+
+selectBtn.MouseButton1Click:Connect(function()
+    selecting = true
+    selectBtn.Text = "Click Player..."
+end)
+
+Mouse.Button1Down:Connect(function()
+    if selecting then
+        local target = Mouse.Target
+        if target then
+            local model = target:FindFirstAncestorOfClass("Model")
+            local plr = Players:GetPlayerFromCharacter(model)
+            if plr then
+                selectedPlayer = plr
+                selectedLabel.Text = "Selected: " .. plr.Name
+                selectBtn.Text = "Select Player"
+                selecting = false
+            end
+        end
+    end
+end)
+
+removeBtn.MouseButton1Click:Connect(function()
+    selectedPlayer = nil
+    selectedLabel.Text = "Selected: None"
+end)
+
+slapSelectedBtn.MouseButton1Click:Connect(function()
+    if selectedPlayer and selectedPlayer.Character then
+        local vec = parseVector(vectorBox.Text)
+        local event = getHangerEvent()
+        if event then
+            event:FireServer("slash", selectedPlayer.Character, vec)
+        end
+    end
+end)
+
+slapAllBtn.MouseButton1Click:Connect(function()
+    local vec = parseVector(vectorBox.Text)
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            local event = getHangerEvent()
+            if event then
+                event:FireServer("slash", plr.Character, vec)
+            end
+        end
+    end
+end)
+
+killBtn.MouseButton1Click:Connect(function()
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            local event = getHangerEvent()
+            if event then
+                event:FireServer("slash", plr.Character, Vector3.new(0,-1000,0))
+            end
+        end
+    end
+end)
+
+-- Keybind toggle (F)
+local keybindConn = Mouse.KeyDown:Connect(function(k)
+    if k:lower() == "f" then
+        enabled = not enabled
+        slapToggle.Text = "Slap: " .. (enabled and "ON" or "OFF")
+    end
+end)
+
+destroyBtn.MouseButton1Click:Connect(function()
+    if keybindConn then keybindConn:Disconnect() end
+    enabled = false
+    gui:Destroy()
+end)
+
+-- Loop
+task.spawn(function()
+    while task.wait(0.01) do
+        if enabled then
+            local interval = tonumber(intervalBox.Text) or 0.01
+            local vec = parseVector(vectorBox.Text)
+            local event = getHangerEvent()
+            if not event then continue end
+            for _,plr in ipairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer and plr.Character then
+                    event:FireServer("slash", plr.Character, vec)
+                end
+            end
+            task.wait(interval)
+        end
+    end
+end)
